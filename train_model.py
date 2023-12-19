@@ -15,6 +15,7 @@ from torch.utils.data import Dataset
 import scipy.io as io
 import matplotlib.pyplot as plt
 from sklearn.metrics import accuracy_score
+from sklearn.metrics import f1_score, roc_auc_score
 
 
 # In this section, we will apply an CNN to extract features and implement a classification task.
@@ -191,14 +192,22 @@ class ECG_dataset(Dataset):
 
     def data_process(self,data):
         # 学习论文以及数据集选择合适和采样率
-        # 并完成随机gaussian 噪声和随机时间尺度放缩
+        # 并完成随机gaussian 噪声和随机时间尺度放缩  #  ---------------------------已完成高斯噪声和尺度----------
         data=data[::3]
         data=data-data.mean()
         data=data/data.std()
+        noise = torch.randn(data.shape) * random.uniform(0.1, 0.5)
+        noise = noise.numpy()
+        data = data + noise
+
+        data = torch.from_numpy(data)  # Convert to PyTorch tensor
+        scale_factor = random.uniform(0.8, 1.2)
+        data = torch.nn.functional.interpolate(data.unsqueeze(0).unsqueeze(0), scale_factor=scale_factor, mode='linear').squeeze()
+
         data=self.crop_padding(data,2400)
         data=torch.tensor(data)
         return data
-
+    
 
     def __getitem__(self, idx):
         file_name=self.file[idx][1]
@@ -242,7 +251,7 @@ num_epochs = 10
 
 def validation(model,criterion,test_dataloaders,device):
     # TODO: add more metrics for evaluation?
-    # Evaluate 
+    # Evaluate   #-----------------------加了F1分数和AUC的指标来validate-----------------------------
     model.eval()
     predict = np.array([])
     target = np.array([])
@@ -259,8 +268,12 @@ def validation(model,criterion,test_dataloaders,device):
             predict=np.append(predict,torch.squeeze(y).cpu().numpy())
             target=np.append(target,torch.squeeze(mask).cpu().numpy())
     acc = accuracy_score(target, predict)
+    f1 = f1_score(target, predict)
+    auc = roc_auc_score(target, predict)
     print('Accuracy: {}'.format(acc))
+    print('F1 Score: {}'.format(f1))
     print('Loss:', loss/step)
+    print('AUC: {}'.format(auc))
     model.train()
 
 
