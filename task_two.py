@@ -5,6 +5,7 @@ import scipy.io as io
 import torch
 import matplotlib.pyplot as plt 
 from torch.utils.data import DataLoader
+from scipy.signal import find_peaks
 
 
 
@@ -44,10 +45,52 @@ class ECG_SVM_dataset(Dataset):
 
 
 data=ECG_SVM_dataset('.')
-d=data[1]
-print(d)
-d_0 = d[0]
-x = np.linspace(0,len(d[0]), len(d[0])) # x轴坐标值
-plt.plot(x, d[0],c = 'r') # 参数c为color简写，表示颜色,r为red即红色
-plt.show() # 显示图像
-print("^^")
+num_samples = len(data)
+print(num_samples)
+
+r_peak = []
+rr_interval = []
+heart_amplitude = []
+
+
+
+for i in data:
+    ecg_data = np.mean(np.array(i[0]), axis=0)
+    # 检测R波
+    r_peaks, _ = find_peaks(ecg_data, distance=150)  # distance参数可以调整以适应你的数据
+    r_peak.append(r_peaks)
+
+# 计算RR间期
+    rr_intervals = np.diff(r_peaks)
+    rr_interval.append(rr_intervals)
+
+# 检测QRS复合波的宽度
+# 这需要更复杂的算法，如波形匹配，这里只是一个简化的示例
+    # qrs_starts = r_peaks - 20  # 假设QRS复合波在R波前20个点开始
+    # qrs_ends = r_peaks + 20  # 假设QRS复合波在R波后20个点结束
+    # qrs_widths = qrs_ends - qrs_starts
+
+# 计算心跳的振幅
+    heart_amplitudes = ecg_data[r_peaks]
+    heart_amplitude.append(heart_amplitudes)
+
+print(r_peak)
+print(rr_interval)
+print(heart_amplitude)
+
+
+
+
+
+
+
+
+
+
+# d=data[1]
+# print(d)
+# d_0 = d[0]
+# x = np.linspace(0,len(d[0]), len(d[0])) # x轴坐标值
+# plt.plot(x, d[0],c = 'r') # 参数c为color简写，表示颜色,r为red即红色
+# plt.show() # 显示图像
+# print("^^")
